@@ -1,0 +1,9 @@
+name = Custom Follow
+description = User follow module.
+package = Custom
+core = 7.x
+version = 7.x-1.x-dev
+dependencies[] = views
+dependencies[] = features
+dependencies[] = follower_views
+files[] = includes/views/custom_follow.views.inc

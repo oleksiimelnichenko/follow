@@ -1,0 +1,38 @@
+<?php
+/**
+ * @file
+ * Installation file for My database module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function custom_follow_schema() {
+  $schema['custom_follow'] = array(
+    'description' => 'Custom table from My database module.',
+    'fields' => array(
+      'id_cf' => array(
+        'description' => 'The primary identifier for a record.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'UID of the followed user.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'follower_uid' => array(
+        'description' => 'Followe UID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('id_cf'),
+  );
+  return $schema;
+}

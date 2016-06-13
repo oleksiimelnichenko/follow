@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Follower views feature.
+ */
+
+include_once 'follower_views.features.inc';

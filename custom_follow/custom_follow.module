@@ -1,0 +1,153 @@
+<?php
+/**
+ * @file
+ * Contains base function for module.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function custom_follow_menu() {
+  $items['admin/custom_follow/follow/nojs/%'] = array(
+    'page callback' => 'custom_follow_callback',
+    'page arguments' => array(3, 4),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/custom_follow/follow/ajax/%'] = array(
+      'delivery callback' => 'ajax_deliver',
+    ) + $items['admin/custom_follow/follow/nojs/%'];
+
+  $items['admin/custom_follow/no-follow/nojs/%'] = array(
+    'page callback' => 'custom_no_follow_callback',
+    'page arguments' => array(3, 4),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/custom_follow/no-follow/ajax/%'] = array(
+      'delivery callback' => 'ajax_deliver',
+    ) + $items['admin/custom_follow/no-follow/nojs/%'];
+
+  return $items;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function custom_follow_views_api()
+{
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'custom_follow') . '/includes/views',
+  );
+}
+
+/**
+ * Implements hook_user_view().
+ */
+function custom_follow_user_view($account, $view_mode, $langcode) {
+  drupal_add_library('system', 'drupal.ajax');
+  global $user;
+  if (custom_follow_is_follower($account->uid, $user->uid)) {
+    $link = l(t('No Follow'), 'admin/custom_follow/no-follow/nojs/' . $account->uid, array('attributes' => array('class' => 'use-ajax no-follow-link')));
+  }
+  else {
+    $link = l(t('Follow'), 'admin/custom_follow/follow/nojs/' . $account->uid, array('attributes' => array('class' => 'use-ajax follow-link')));
+  }
+  $account->content['summary']['follow'] = array(
+    '#type' => 'user_profile_item',
+    '#title' => t('Follow'),
+    '#markup' => $link,
+  );
+}
+
+/**
+ * Custom follow callback to store followers.
+ *
+ * @param $ajax
+ * @param $uid
+ * @return array|int
+ */
+function custom_follow_callback($ajax, $uid) {
+  global $user;
+  $is_ajax = $ajax === 'ajax';
+  // Since clicking this link updates the database, we used drupal_get_token() for security.
+//  if (empty($_GET['tok']) || !drupal_valid_token($_GET['tok'], 'delete_log_item' . $flid)) {
+//    return MENU_ACCESS_DENIED;
+//  }
+  $id = db_insert('custom_follow')
+    ->fields(array(
+      'uid' => $uid,
+      'follower_uid' => $user->uid,
+    ))
+    ->execute();
+
+  if ($is_ajax) {
+    $commands = array();
+    $selector = '.follow-link';
+    $html = l(t('No Follow'), 'admin/custom_follow/no-follow/nojs/' . $uid, array('attributes' => array('class' => 'use-ajax no-follow-link')));
+    $commands[] = ajax_command_replace($selector, $html, $settings = NULL);
+    return array(
+      '#type' => 'ajax',
+      '#commands' => $commands,
+    );
+  }
+  else {
+    drupal_set_message(t('Deleted 1 message'));
+    drupal_goto();
+  }
+}
+
+/**
+ * Custom no follow callback to delete followers.
+ * @param $ajax
+ * @param $uid
+ * @return array|int
+ *  command for the ajax.
+ */
+function custom_no_follow_callback($ajax, $uid) {
+  global $user;
+  $is_ajax = $ajax === 'ajax';
+  // Since clicking this link updates the database, we used drupal_get_token() for security.
+//  if (empty($_GET['tok']) || !drupal_valid_token($_GET['tok'], 'delete_log_item' . $flid)) {
+//    return MENU_ACCESS_DENIED;
+//  }
+  db_delete('custom_follow')
+    ->condition('uid', $uid)
+    ->condition('follower_uid', $user->uid)
+    ->execute();
+
+  if ($is_ajax) {
+    $commands = array();
+    $selector = '.no-follow-link';
+    $html = l(t('Follow'), 'admin/custom_follow/follow/nojs/' . $uid, array('attributes' => array('class' => 'use-ajax follow-link')));
+    $commands[] = ajax_command_replace($selector, $html, $settings = NULL);
+    return array(
+      '#type' => 'ajax',
+      '#commands' => $commands,
+    );
+  }
+  else {
+    drupal_set_message(t('Deleted 1 message'));
+    drupal_goto();
+  }
+}
+
+/**
+ * Determines if user is follower.
+ *
+ * @param $uid
+ * @param $follower
+ *
+ * @return TRUE if user follows FALSE if not.
+ */
+function custom_follow_is_follower($uid, $follower) {
+  $id = db_query("SELECT id_cf FROM {custom_follow} WHERE uid = :uid AND follower_uid=:fuid", array(
+    ':uid' => $uid,
+    ':fuid' => $follower
+  ))->fetchField();
+  if (!empty($id)) {
+    return TRUE;
+  }
+  return FALSE;
+}
